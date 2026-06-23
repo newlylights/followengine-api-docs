@@ -1,0 +1,480 @@
+openapi: "3.0.3"
+info:
+  title: FollowEngine API
+  description: >
+    FollowEngine is a competitor growth intelligence platform. This API provides
+    programmatic access to competitor monitoring, signal detection, AI-generated
+    briefs, and webhook management.
+
+    Base URL: `https://api.followengine.com/v1`
+
+    Get your API key at [followengine.com](https://followengine.com).
+  version: "1.0.0"
+  contact:
+    name: FollowEngine API Support
+    url: https://followengine.com
+    email: api@followengine.com
+  license:
+    name: Proprietary
+    url: https://followengine.com/terms
+
+servers:
+  - url: https://api.followengine.com/v1
+    description: Production
+
+tags:
+  - name: Competitors
+    description: Manage monitored competitors
+  - name: Signals
+    description: Competitor signal detection
+  - name: Briefs
+    description: AI-generated strategy briefs
+  - name: Webhooks
+    description: Real-time event subscriptions
+
+paths:
+  /competitors:
+    get:
+      tags: [Competitors]
+      summary: List competitors
+      description: Returns all competitors being monitored by your account.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, paused, error]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: cursor
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  competitors:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Competitor"
+                  total:
+                    type: integer
+                  has_more:
+                    type: boolean
+                  next_cursor:
+                    type: string
+    post:
+      tags: [Competitors]
+      summary: Add competitor
+      description: Start monitoring a new competitor.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [domain]
+              properties:
+                domain:
+                  type: string
+                  example: "competitor.com"
+                name:
+                  type: string
+                  example: "Competitor Inc"
+                channels:
+                  type: array
+                  items:
+                    type: string
+                    enum: [google_ads, meta_ads, tiktok_ads, youtube, tiktok, search, web]
+                  example: ["google_ads", "search"]
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competitor"
+
+  /competitors/{id}:
+    get:
+      tags: [Competitors]
+      summary: Get competitor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competitor"
+    patch:
+      tags: [Competitors]
+      summary: Update competitor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                channels:
+                  type: array
+                  items:
+                    type: string
+                status:
+                  type: string
+                  enum: [active, paused]
+                tags:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Competitor"
+    delete:
+      tags: [Competitors]
+      summary: Remove competitor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /competitors/{id}/signals:
+    get:
+      tags: [Signals]
+      summary: Competitor signals
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: channel
+          in: query
+          schema:
+            type: string
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signals:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Signal"
+
+  /signals:
+    get:
+      tags: [Signals]
+      summary: All signals
+      parameters:
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: OK
+
+  /signals/{id}:
+    get:
+      tags: [Signals]
+      summary: Signal details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Signal"
+
+  /briefs:
+    get:
+      tags: [Briefs]
+      summary: List briefs
+      parameters:
+        - name: competitor_id
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  briefs:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Brief"
+    post:
+      tags: [Briefs]
+      summary: Generate brief
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [competitor_id]
+              properties:
+                competitor_id:
+                  type: string
+                period:
+                  type: string
+                  enum: [last_7_days, last_30_days, last_quarter]
+                  default: last_7_days
+                channels:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "202":
+          description: Generation started
+
+  /briefs/{id}:
+    get:
+      tags: [Briefs]
+      summary: Get brief
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Brief"
+
+  /webhooks:
+    get:
+      tags: [Webhooks]
+      summary: List webhooks
+      responses:
+        "200":
+          description: OK
+    post:
+      tags: [Webhooks]
+      summary: Create webhook
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, events]
+              properties:
+                url:
+                  type: string
+                  format: uri
+                events:
+                  type: array
+                  items:
+                    type: string
+                    enum: [signal.new, signal.escalated, competitor.added, competitor.status_changed, brief.generated]
+                secret:
+                  type: string
+      responses:
+        "201":
+          description: Created
+
+  /webhooks/{id}:
+    delete:
+      tags: [Webhooks]
+      summary: Remove webhook
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: API key from https://followengine.com/dashboard/settings
+
+  schemas:
+    Competitor:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "comp_01h2x3y4z5"
+        name:
+          type: string
+          example: "Acme Corp"
+        domain:
+          type: string
+          example: "acmecorp.com"
+        channels:
+          type: array
+          items:
+            type: string
+          example: ["google_ads", "meta_ads", "search"]
+        status:
+          type: string
+          enum: [active, paused, error]
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        last_signal_at:
+          type: string
+          format: date-time
+
+    Signal:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "sig_01h2x4z5a6"
+        competitor_id:
+          type: string
+        competitor_name:
+          type: string
+        channel:
+          type: string
+          example: "google_ads"
+        type:
+          type: string
+          example: "new_creative"
+        title:
+          type: string
+          example: "Acme Corp launched a free trial angle"
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        change_pct:
+          type: number
+          example: 24
+        detected_at:
+          type: string
+          format: date-time
+        url:
+          type: string
+          format: uri
+
+    Brief:
+      type: object
+      properties:
+        id:
+          type: string
+        competitor_id:
+          type: string
+        period:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        what_changed:
+          type: array
+          items:
+            type: string
+        what_repeated:
+          type: array
+          items:
+            type: string
+        what_to_copy:
+          type: array
+          items:
+            type: string
+        signal_count:
+          type: integer
+        generated_at:
+          type: string
+          format: date-time
+
+security:
+  - BearerAuth: []
